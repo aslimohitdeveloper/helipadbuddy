@@ -2,7 +2,9 @@ package com.mskdevelopers.helipadbuddy.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mskdevelopers.helipadbuddy.data.model.PressureWidgetData
 import com.mskdevelopers.helipadbuddy.data.model.PressureData
+import com.mskdevelopers.helipadbuddy.data.repository.PressureWidgetRepository
 import com.mskdevelopers.helipadbuddy.data.repository.SensorRepository
 import com.mskdevelopers.helipadbuddy.domain.calculation.AviationFormulas
 import com.mskdevelopers.helipadbuddy.domain.calculation.DensityAltitudeCalculator
@@ -18,11 +20,20 @@ import kotlinx.coroutines.flow.update
  * Barometric pressure: QFE, QNH, pressure altitude, density altitude, trend.
  */
 class PressureViewModel(
-    private val sensorRepository: SensorRepository
+    private val sensorRepository: SensorRepository,
+    private val pressureWidgetRepository: PressureWidgetRepository
 ) : ViewModel() {
 
     private val _pressureData = MutableStateFlow(PressureData.EMPTY)
     val pressureData: StateFlow<PressureData> = _pressureData.asStateFlow()
+
+    val pressureWidgetData: StateFlow<PressureWidgetData> = pressureWidgetRepository.pressureWidgetData
+
+    /** Weather API temperature for QFF; set from WidgetSyncViewModel. */
+    private val _weatherTemperatureC = MutableStateFlow(15f)
+    fun setWeatherTemperatureC(celsius: Float) {
+        _weatherTemperatureC.value = celsius
+    }
 
     /** GPS altitude (m) for QNH calculation; set from LocationViewModel. */
     private val _gpsAltitudeMeters = MutableStateFlow(0f)
@@ -94,6 +105,14 @@ class PressureViewModel(
                         timestamp = now
                     )
                 }
+
+                val altMsl = if (userElevation > 0f) userElevation.toDouble() else _gpsAltitudeMeters.value.toDouble()
+                pressureWidgetRepository.onPressureSample(
+                    rawQfeHpa = qfeHpa,
+                    qnhHpa = qnh,
+                    altitudeMslMeters = altMsl,
+                    temperatureC = _weatherTemperatureC.value
+                )
             }
             .launchIn(viewModelScope)
     }

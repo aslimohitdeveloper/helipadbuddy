@@ -1,6 +1,7 @@
 package com.mskdevelopers.helipadbuddy.data.repository
 
 import android.content.Context
+import com.mskdevelopers.helipadbuddy.domain.calculation.GeoidCalculator
 
 /**
  * Central aggregation of sensor repositories.
@@ -8,7 +9,8 @@ import android.content.Context
  */
 class SensorRepository(context: Context) {
 
-    val locationRepository = LocationRepository(context)
+    val geoidCalculator = GeoidCalculator(context.applicationContext)
+    val locationRepository = LocationRepository(context, geoidCalculator)
     val pressureRepository = PressureRepository(context)
     val motionRepository = MotionRepository(context)
     val lightRepository = LightRepository(context)

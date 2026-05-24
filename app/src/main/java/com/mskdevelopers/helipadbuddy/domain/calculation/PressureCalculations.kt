@@ -38,4 +38,17 @@ object PressureCalculations {
 
     fun metersToFeet(meters: Float): Float = meters * 3.28084f
     fun feetToMeters(feet: Float): Float = feet / 3.28084f
+
+    /**
+     * QFF (pressure reduced to MSL using temperature-dependent barometric formula).
+     * qff = qfe × exp(g × altitude / (R × T))
+     */
+    fun calculateQff(qfeHpa: Double, altitudeMeters: Double, temperatureC: Double): Double {
+        if (qfeHpa <= 0.0 || altitudeMeters <= 0.0) return qfeHpa
+        val kelvin = temperatureC + 273.15
+        if (kelvin <= 0.0) return qfeHpa
+        return qfeHpa * kotlin.math.exp(
+            (9.80665 * altitudeMeters) / (287.05 * kelvin)
+        )
+    }
 }

@@ -59,14 +59,15 @@ class LocationViewModel(
     }
 
     fun setHeadingFromAttitude(heading: Float) {
-        val normalized = AviationFormulas.normalizeDegrees(heading)
+        val normalized = AviationFormulas.normalizeHeading(heading)
         _headingDegrees.value = normalized
-        // Apply EMA smoothing to heading
         if (smoothedHeading == 0f && normalized != 0f) {
             smoothedHeading = normalized
         } else if (normalized != 0f) {
-            smoothedHeading = AviationFormulas.exponentialMovingAverage(normalized, smoothedHeading, 0.85f)
-            smoothedHeading = AviationFormulas.normalizeDegrees(smoothedHeading)
+            val delta = AviationFormulas.angleDifference(normalized, smoothedHeading)
+            smoothedHeading = AviationFormulas.normalizeHeading(
+                smoothedHeading + 0.12f * delta
+            )
         }
     }
 
@@ -76,20 +77,22 @@ class LocationViewModel(
         gnssJob?.cancel()
         positionJob = combine(
             locationRepo.positionFlow().onStart { emit(PositionData.EMPTY) },
-            _headingDegrees.asStateFlow()
-        ) { pos, hdg ->
-            // Smooth altitude
-            val finalAltitude = if (pos.hasFix && pos.altitudeMeters != 0.0) {
-                altitudeHistory.add(pos.altitudeMeters)
+            _headingDegrees.asStateFlow(),
+            _gnssHealth.asStateFlow()
+        ) { pos, hdg, gnss ->
+            val fixQuality = if (pos.hasFix) gnss.quality.name else "NO_FIX"
+
+            // Smooth MSL altitude only; WGS84 passes through unsmoothed
+            val finalMsl = if (pos.hasFix && pos.altitudeMslMeters != 0.0) {
+                altitudeHistory.add(pos.altitudeMslMeters)
                 if (altitudeHistory.size > maxHistorySize) altitudeHistory.removeAt(0)
                 if (altitudeHistory.size >= 3) {
                     altitudeHistory.average()
                 } else {
-                    pos.altitudeMeters
+                    pos.altitudeMslMeters
                 }
             } else {
-                // Fallback to raw or last smoothed value
-                if (smoothedAltitude != 0.0) smoothedAltitude else pos.altitudeMeters
+                if (smoothedAltitude != 0.0) smoothedAltitude else pos.altitudeMslMeters
             }
 
             // Smooth speed
@@ -109,8 +112,7 @@ class LocationViewModel(
             // Apply speed threshold: if below 0.5 m/s, set to 0 (device at rest)
             val finalSpeed = if (rawSmoothedSpeed < MIN_SPEED_THRESHOLD_MPS) 0f else rawSmoothedSpeed
 
-            // Update smoothed values for next iteration
-            smoothedAltitude = finalAltitude
+            smoothedAltitude = finalMsl
             smoothedSpeed = finalSpeed
 
             // Use smoothed heading or fallback to track
@@ -125,7 +127,7 @@ class LocationViewModel(
             // Convert smoothed speed to knots/kmh
             val finalSpeedKnots = AviationFormulas.mpsToKnots(finalSpeed)
             val finalSpeedKmh = AviationFormulas.mpsToKmh(finalSpeed)
-            val finalAltitudeFeet = AviationFormulas.metersToFeet(finalAltitude)
+            val finalMslFeet = AviationFormulas.metersToFeet(finalMsl)
 
             // Calculate and smooth track vs heading delta (Δ)
             val rawDelta = AviationFormulas.trackVsHeadingDegrees(pos.trackDegrees, displayHeading)
@@ -145,13 +147,16 @@ class LocationViewModel(
             }
 
             pos.copy(
-                altitudeMeters = finalAltitude,
-                altitudeFeet = finalAltitudeFeet,
+                altitudeMslMeters = finalMsl,
+                altitudeMslFeet = finalMslFeet,
+                altitudeWgs84Meters = pos.altitudeWgs84Meters,
+                altitudeWgs84Feet = pos.altitudeWgs84Feet,
                 groundSpeedMps = finalSpeed,
                 groundSpeedKnots = finalSpeedKnots,
                 groundSpeedKmh = finalSpeedKmh,
                 headingDegrees = displayHeading,
-                trackVsHeadingDegrees = finalDelta
+                trackVsHeadingDegrees = finalDelta,
+                fixQuality = fixQuality
             )
         }.onEach { _position.value = it }
             .launchIn(viewModelScope)

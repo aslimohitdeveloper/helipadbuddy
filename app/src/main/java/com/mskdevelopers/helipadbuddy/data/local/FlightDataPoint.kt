@@ -30,5 +30,9 @@ data class FlightDataPoint(
     val groundSpeedKnots: Float,
     val headingDegrees: Float,
     val verticalSpeedFtMin: Float,
-    val gLoad: Float
+    val gLoad: Float,
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0,
+    val altitudeMslMeters: Double = 0.0,
+    val altitudeWgs84Meters: Double = 0.0
 )

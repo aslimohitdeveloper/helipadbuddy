@@ -6,20 +6,23 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.os.BatteryManager
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import com.mskdevelopers.helipadbuddy.worker.WorkerScheduler
 
 /**
- * Foreground service for sensor monitoring when app is in background.
- * Configured in AndroidManifest; start/stop from app when needed.
- * Plan: Phase 1 - Configure foreground service for sensor monitoring.
+ * Foreground service for background sensor monitoring and alert delivery.
  */
 class SensorMonitorService : Service() {
+
+    private var lowBatteryMode = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        lowBatteryMode = isLowBattery()
         val notification = createNotification()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -28,7 +31,21 @@ class SensorMonitorService : Service() {
                 startForeground(NOTIFICATION_ID, notification)
             }
         }
-        return START_NOT_STICKY
+        if (!lowBatteryMode) {
+            WorkerScheduler.schedulePeriodicWeatherRefresh(applicationContext)
+        }
+        return START_STICKY
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        stopForeground(STOP_FOREGROUND_REMOVE)
+    }
+
+    private fun isLowBattery(): Boolean {
+        val bm = getSystemService(BATTERY_SERVICE) as BatteryManager
+        val level = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+        return level in 1..19
     }
 
     private fun createNotification(): Notification {
@@ -41,9 +58,10 @@ class SensorMonitorService : Service() {
             ).apply { setShowBadge(false) }
             (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(channel)
         }
+        val mode = if (lowBatteryMode) "Low battery mode" else "Monitoring active"
         return NotificationCompat.Builder(this, channelId)
             .setContentTitle("Helipad Buddy")
-            .setContentText("Sensor monitoring active")
+            .setContentText("Sensor monitoring — $mode")
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
@@ -52,5 +70,11 @@ class SensorMonitorService : Service() {
 
     companion object {
         private const val NOTIFICATION_ID = 1001
+        fun start(context: android.content.Context) {
+            context.startForegroundService(Intent(context, SensorMonitorService::class.java))
+        }
+        fun stop(context: android.content.Context) {
+            context.stopService(Intent(context, SensorMonitorService::class.java))
+        }
     }
 }

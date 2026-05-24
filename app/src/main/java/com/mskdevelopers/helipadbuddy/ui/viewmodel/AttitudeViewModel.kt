@@ -38,6 +38,7 @@ class AttitudeViewModel(
     private var lastGyroTimeNs: Long = 0
     private var fusedPitchDeg: Float = 0f
     private var fusedRollDeg: Float = 0f
+    private var smoothedRollDeg: Float = 0f
     private val alpha = 0.98f
     private var smoothedHeadingDeg: Float = 0f
     private val headingAlpha = 0.88f
@@ -81,6 +82,14 @@ class AttitudeViewModel(
                 fusedRollDeg = rollAccDeg
             }
 
+            smoothedRollDeg = if (smoothedRollDeg == 0f && fusedRollDeg != 0f) {
+                fusedRollDeg
+            } else {
+                smoothedRollDeg + 0.08f * AviationFormulas.angleDifference(fusedRollDeg, smoothedRollDeg)
+            }
+            var displayRoll = smoothedRollDeg
+            if (kotlin.math.abs(displayRoll) < 8f) displayRoll = 0f
+
             // Magnetic heading: rotate mag into horizontal plane using pitch/roll, then atan2
             val sinP = kotlin.math.sin(fusedPitchDeg * Math.PI / 180).toFloat()
             val cosP = kotlin.math.cos(fusedPitchDeg * Math.PI / 180).toFloat()
@@ -114,7 +123,7 @@ class AttitudeViewModel(
 
             _attitude.value = AttitudeData(
                 pitchDegrees = fusedPitchDeg,
-                rollDegrees = fusedRollDeg,
+                rollDegrees = displayRoll,
                 headingDegrees = smoothedHeadingDeg,
                 timestamp = System.currentTimeMillis()
             )

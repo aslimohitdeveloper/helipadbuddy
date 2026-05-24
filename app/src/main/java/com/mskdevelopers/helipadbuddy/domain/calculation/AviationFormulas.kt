@@ -26,6 +26,14 @@ object AviationFormulas {
         return d
     }
 
+    fun normalizeHeading(heading: Float): Float = normalizeDegrees(heading)
+
+    /** Shortest signed angle from [current] to [target] in degrees, range (-180, 180]. */
+    fun angleDifference(target: Float, current: Float): Float {
+        var diff = (target - current + 540f) % 360f - 180f
+        return diff
+    }
+
     /** Track vs heading difference (e.g. for crosswind indication). */
     fun trackVsHeadingDegrees(track: Float, heading: Float): Float =
         normalizeDegrees(normalizeDegrees(track) - normalizeDegrees(heading))

@@ -59,7 +59,11 @@ class LoggingViewModel(
         groundSpeedKnots: Float,
         headingDegrees: Float,
         verticalSpeedFtMin: Float,
-        gLoad: Float
+        gLoad: Float,
+        latitude: Double = 0.0,
+        longitude: Double = 0.0,
+        altitudeMslMeters: Double = altitudeMeters,
+        altitudeWgs84Meters: Double = 0.0
     ) {
         viewModelScope.launch {
             _activeSessionId.value?.let { sessionId ->
@@ -69,7 +73,11 @@ class LoggingViewModel(
                     groundSpeedKnots = groundSpeedKnots,
                     headingDegrees = headingDegrees,
                     verticalSpeedFtMin = verticalSpeedFtMin,
-                    gLoad = gLoad
+                    gLoad = gLoad,
+                    latitude = latitude,
+                    longitude = longitude,
+                    altitudeMslMeters = altitudeMslMeters,
+                    altitudeWgs84Meters = altitudeWgs84Meters
                 )
             }
         }

@@ -22,6 +22,10 @@ class LoggingRepository(context: Context) {
     fun getAllSessions(): Flow<List<FlightSession>> = sessionDao.getAllSessions()
     fun getActiveSession(): Flow<FlightSession?> = sessionDao.getActiveSession()
 
+    suspend fun getActiveSessionOnce(): FlightSession? = withContext(Dispatchers.IO) {
+        sessionDao.getActiveSessionOnce()
+    }
+
     suspend fun startSession(): Long {
         return withContext(Dispatchers.IO) {
             sessionDao.insert(
@@ -49,7 +53,11 @@ class LoggingRepository(context: Context) {
         groundSpeedKnots: Float,
         headingDegrees: Float,
         verticalSpeedFtMin: Float,
-        gLoad: Float
+        gLoad: Float,
+        latitude: Double = 0.0,
+        longitude: Double = 0.0,
+        altitudeMslMeters: Double = altitudeMeters,
+        altitudeWgs84Meters: Double = 0.0
     ) {
         withContext(Dispatchers.IO) {
             pointDao.insert(
@@ -60,11 +68,20 @@ class LoggingRepository(context: Context) {
                     groundSpeedKnots = groundSpeedKnots,
                     headingDegrees = headingDegrees,
                     verticalSpeedFtMin = verticalSpeedFtMin,
-                    gLoad = gLoad
+                    gLoad = gLoad,
+                    latitude = latitude,
+                    longitude = longitude,
+                    altitudeMslMeters = altitudeMslMeters,
+                    altitudeWgs84Meters = altitudeWgs84Meters
                 )
             )
         }
     }
+
+    suspend fun getPointsForSessionOnce(sessionId: Long): List<FlightDataPoint> =
+        withContext(Dispatchers.IO) {
+            pointDao.getPointsForSessionOnce(sessionId)
+        }
 
     /**
      * Export session to CSV file. Returns the file path or null on error.
@@ -73,9 +90,9 @@ class LoggingRepository(context: Context) {
         try {
             val points = pointDao.getPointsForSessionOnce(sessionId)
             FileWriter(outputFile).use { writer ->
-                writer.write("timestamp_ms,altitude_m,ground_speed_kt,heading_deg,vsi_ft_min,g_load\n")
+                writer.write("timestamp_ms,altitude_m,ground_speed_kt,heading_deg,vsi_ft_min,g_load,lat,lon,alt_msl_m,alt_wgs84_m\n")
                 points.forEach { p ->
-                    writer.write("${p.timestampMillis},${p.altitudeMeters},${p.groundSpeedKnots},${p.headingDegrees},${p.verticalSpeedFtMin},${p.gLoad}\n")
+                    writer.write("${p.timestampMillis},${p.altitudeMeters},${p.groundSpeedKnots},${p.headingDegrees},${p.verticalSpeedFtMin},${p.gLoad},${p.latitude},${p.longitude},${p.altitudeMslMeters},${p.altitudeWgs84Meters}\n")
                 }
             }
             Result.success(outputFile)

@@ -37,6 +37,8 @@ fun LoggingScreen(
     onStopSession: () -> Unit,
     onExportSession: (Long, Context) -> Unit,
     onClearExportResult: () -> Unit,
+    onReplaySession: (Long) -> Unit = {},
+    onAnalyticsSession: (Long) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -136,8 +138,10 @@ fun LoggingScreen(
                             }
                         }
                         if (!session.isActive) {
-                            Button(onClick = { onExportSession(session.id, context) }) {
-                                Text("Export CSV")
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Button(onClick = { onReplaySession(session.id) }) { Text("Replay") }
+                                Button(onClick = { onAnalyticsSession(session.id) }) { Text("Charts") }
+                                Button(onClick = { onExportSession(session.id, context) }) { Text("CSV") }
                             }
                         }
                     }

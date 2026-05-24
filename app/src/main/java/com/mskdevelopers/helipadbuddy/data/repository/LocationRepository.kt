@@ -15,6 +15,7 @@ import com.google.android.gms.location.Priority
 import com.mskdevelopers.helipadbuddy.data.model.GnssHealthData
 import com.mskdevelopers.helipadbuddy.data.model.PositionData
 import com.mskdevelopers.helipadbuddy.domain.calculation.AviationFormulas
+import com.mskdevelopers.helipadbuddy.domain.calculation.GeoidCalculator
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -26,7 +27,10 @@ import kotlinx.coroutines.tasks.await
  * GNSS and fused location data.
  * Exposes position (WGS84) and GNSS health via Flow.
  */
-class LocationRepository(private val context: Context) {
+class LocationRepository(
+    private val context: Context,
+    private val geoidCalculator: GeoidCalculator
+) {
 
     private val locationManager: LocationManager =
         context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
@@ -49,7 +53,11 @@ class LocationRepository(private val context: Context) {
         val callback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
                 val location = result.lastLocation ?: return
-                val altFt = AviationFormulas.metersToFeet(location.altitude.toFloat())
+                val altitudes = geoidCalculator.resolveAltitudes(location)
+                val wgs84 = altitudes.wgs84Meters
+                val msl = altitudes.mslMeters
+                val mslFt = AviationFormulas.metersToFeet(msl)
+                val wgs84Ft = AviationFormulas.metersToFeet(wgs84)
                 val speedKnots = AviationFormulas.mpsToKnots(location.speed)
                 val speedKmh = AviationFormulas.mpsToKmh(location.speed)
                 val track = if (location.hasBearing()) location.bearing else 0f
@@ -57,8 +65,10 @@ class LocationRepository(private val context: Context) {
                     PositionData(
                         latitude = location.latitude,
                         longitude = location.longitude,
-                        altitudeMeters = location.altitude,
-                        altitudeFeet = altFt.toDouble(),
+                        altitudeMslMeters = msl,
+                        altitudeWgs84Meters = wgs84,
+                        altitudeMslFeet = mslFt,
+                        altitudeWgs84Feet = wgs84Ft,
                         groundSpeedMps = location.speed,
                         groundSpeedKnots = speedKnots,
                         groundSpeedKmh = speedKmh,
@@ -66,6 +76,7 @@ class LocationRepository(private val context: Context) {
                         headingDegrees = 0f,
                         trackVsHeadingDegrees = 0f,
                         hasFix = true,
+                        fixQuality = "GOOD",
                         timestamp = location.time
                     )
                 )

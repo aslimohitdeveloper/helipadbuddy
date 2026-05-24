@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">Helipad Buddy</string>
+    <string name="weather_widget_description">Aviation weather and METAR dashboard</string>
+    <string name="weather_widget_full_label">Helipad Weather (full)</string>
+    <string name="weather_widget_compact_label">Helipad Weather (compact)</string>
+    <string name="developer_name">Mohit Developer</string>
+    <string name="developer_whatsapp_label">WhatsApp</string>
+    <string name="developer_whatsapp_number">+91 89302 53964</string>
 </resources>

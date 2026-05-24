@@ -20,6 +20,9 @@ interface FlightSessionDao {
     @Query("SELECT * FROM flight_sessions WHERE isActive = 1 LIMIT 1")
     fun getActiveSession(): Flow<FlightSession?>
 
+    @Query("SELECT * FROM flight_sessions WHERE isActive = 1 LIMIT 1")
+    suspend fun getActiveSessionOnce(): FlightSession?
+
     @Query("SELECT * FROM flight_sessions WHERE id = :id")
     suspend fun getSessionById(id: Long): FlightSession?
 }
