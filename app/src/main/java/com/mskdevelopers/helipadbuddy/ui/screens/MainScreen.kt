@@ -6,7 +6,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.layout.PaddingValues
@@ -29,6 +28,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.mskdevelopers.helipadbuddy.data.model.AlertData
@@ -190,88 +190,92 @@ private fun SensorDataTab(
     speedKnots: Boolean,
     altitudeFeet: Boolean
 ) {
-    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val spacing = 8.dp
-        val row2H = 150.dp
-        val fixedTotal = 170.dp + row2H + 120.dp + 55.dp + spacing * 3
-        val scale = if (maxHeight > fixedTotal) 1f else (maxHeight / fixedTotal).coerceIn(0.75f, 1f)
-        val row1 = (170.dp * scale).coerceAtLeast(140.dp)
-        val row2 = (row2H * scale).coerceAtLeast(130.dp)
-        val row3 = (120.dp * scale).coerceAtLeast(100.dp)
-        val row4 = (55.dp * scale).coerceAtLeast(48.dp)
-        val contentHeight = row1 + row2 + row3 + row4 + spacing * 3
-        val footerH = (maxHeight - contentHeight).coerceAtLeast(96.dp)
+    val spacing = 8.dp
+    val heights = rememberSensorTabHeights()
 
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(12),
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(spacing),
-            userScrollEnabled = false,
-            horizontalArrangement = Arrangement.spacedBy(spacing),
-            verticalArrangement = Arrangement.spacedBy(spacing),
-            contentPadding = PaddingValues(0.dp)
-        ) {
-            item(span = { GridItemSpan(8) }) {
-                AltitudeCard(
-                    position = inputs.position,
-                    pressure = inputs.pressure,
-                    terrain = inputs.terrain,
-                    altitudeFeet = altitudeFeet,
-                    modifier = Modifier.fillMaxWidth().height(row1)
-                )
-            }
-            item(span = { GridItemSpan(4) }) {
-                VsiCard(
-                    vertical = inputs.vertical,
-                    modifier = Modifier.fillMaxWidth().height(row1)
-                )
-            }
-            item(span = { GridItemSpan(4) }) {
-                SpeedCard(
-                    position = inputs.position,
-                    speedKnots = speedKnots,
-                    modifier = Modifier.fillMaxWidth().height(row2)
-                )
-            }
-            item(span = { GridItemSpan(4) }) {
-                CompassCard(
-                    position = inputs.position,
-                    gnss = inputs.gnss,
-                    magneticStrength = magneticStrength,
-                    modifier = Modifier.fillMaxWidth().height(row2)
-                )
-            }
-            item(span = { GridItemSpan(4) }) {
-                GnssStatusCard(
-                    gnss = inputs.gnss,
-                    modifier = Modifier.fillMaxWidth().height(row2)
-                )
-            }
-            item(span = { GridItemSpan(6) }) {
-                PressureCard(
-                    pressure = inputs.pressure,
-                    modifier = Modifier.fillMaxWidth().height(row3)
-                )
-            }
-            item(span = { GridItemSpan(6) }) {
-                MotionCard(
-                    motion = inputs.motion,
-                    modifier = Modifier.fillMaxWidth().height(row3)
-                )
-            }
-            item(span = { GridItemSpan(12) }) {
-                StatusCard(
-                    primaryAlert = primaryAlert,
-                    modifier = Modifier.fillMaxWidth().height(row4)
-                )
-            }
-            item(span = { GridItemSpan(12) }) {
-                DeveloperInfoCard(
-                    modifier = Modifier.fillMaxWidth().height(footerH)
-                )
-            }
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(12),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(spacing),
+        userScrollEnabled = true,
+        horizontalArrangement = Arrangement.spacedBy(spacing),
+        verticalArrangement = Arrangement.spacedBy(spacing),
+        contentPadding = PaddingValues(0.dp)
+    ) {
+        item(span = { GridItemSpan(8) }) {
+            AltitudeCard(
+                position = inputs.position,
+                pressure = inputs.pressure,
+                terrain = inputs.terrain,
+                altitudeFeet = altitudeFeet,
+                modifier = Modifier.fillMaxWidth().height(heights.row1)
+            )
         }
+        item(span = { GridItemSpan(4) }) {
+            VsiCard(
+                vertical = inputs.vertical,
+                modifier = Modifier.fillMaxWidth().height(heights.row1)
+            )
+        }
+        item(span = { GridItemSpan(4) }) {
+            SpeedCard(
+                position = inputs.position,
+                speedKnots = speedKnots,
+                modifier = Modifier.fillMaxWidth().height(heights.row2)
+            )
+        }
+        item(span = { GridItemSpan(4) }) {
+            CompassCard(
+                position = inputs.position,
+                gnss = inputs.gnss,
+                magneticStrength = magneticStrength,
+                modifier = Modifier.fillMaxWidth().height(heights.row2)
+            )
+        }
+        item(span = { GridItemSpan(4) }) {
+            GnssStatusCard(
+                gnss = inputs.gnss,
+                modifier = Modifier.fillMaxWidth().height(heights.row2)
+            )
+        }
+        item(span = { GridItemSpan(6) }) {
+            PressureCard(
+                pressure = inputs.pressure,
+                modifier = Modifier.fillMaxWidth().height(heights.row3)
+            )
+        }
+        item(span = { GridItemSpan(6) }) {
+            MotionCard(
+                motion = inputs.motion,
+                modifier = Modifier.fillMaxWidth().height(heights.row3)
+            )
+        }
+        item(span = { GridItemSpan(12) }) {
+            StatusCard(
+                primaryAlert = primaryAlert,
+                modifier = Modifier.fillMaxWidth().height(heights.row4)
+            )
+        }
+        item(span = { GridItemSpan(12) }) {
+            DeveloperInfoCard(
+                modifier = Modifier.fillMaxWidth().height(heights.footer)
+            )
+        }
+    }
+}
+
+@Composable
+private fun rememberSensorTabHeights(): SensorTabHeights {
+    val scale = LocalDensity.current.fontScale.coerceIn(1f, 1.4f)
+    return remember(scale) {
+        SensorTabHeights(
+            row1 = 170.dp * scale,
+            row2 = 150.dp * scale,
+            row3 = 128.dp * scale,
+            row4 = 60.dp * scale,
+            footer = 104.dp * scale
+        )
     }
 }
 
@@ -391,6 +395,14 @@ private fun MetarWeatherTab(
 }
 
 private operator fun Dp.times(scale: Float): Dp = (this.value * scale).dp
+
+private data class SensorTabHeights(
+    val row1: Dp,
+    val row2: Dp,
+    val row3: Dp,
+    val row4: Dp,
+    val footer: Dp
+)
 
 private data class InstrumentInputs(
     val position: PositionData,
